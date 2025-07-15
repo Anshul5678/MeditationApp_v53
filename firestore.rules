@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Meditation Users - users can only read/write their own data
+    match /MeditationUsers/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Meditation Timer subcollection - users can read/write their own sessions
+      match /MeditationTimer/{sessionId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Saved items subcollections - users can read/write their own saved items
+      match /savedCourses/{courseId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /savedEvents/{eventId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Meditation Courses - allow read for all authenticated users
+    match /MeditationCourses/{courseId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid in ['admin-uid-here'];
+      
+      // Course enrolled users subcollection - users can read/write their own enrollment
+      match /enrolledUsers/{userId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+        // Allow reading other users' ratings for course reviews display
+        allow read: if request.auth != null && 'rating' in resource.data;
+      }
+    }
+
+    // Meditation Content - allow read for all authenticated users
+    match /MeditationContent/{contentId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid in ['admin-uid-here'];
+    }
+
+    // Teachers are publicly readable, admin writable
+    match /MeditationTeachers/{teacherId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid in ['admin-uid-here'];
+    }
+
+    // Events are publicly readable, admin writable
+    match /MeditationEvents/{eventId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid in ['admin-uid-here'];
+      
+      // Event enrolled users subcollection - users can read/write their own enrollment
+      match /enrolledUsers/{userId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Check-ins - users can read/write their own check-ins
+    match /checkIns/{checkInId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Streak data - users can read/write their own streak data
+    match /streakData/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Meditation App general collection
+    match /meditationApp/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // Check-in sessions subcollection
+      match /checkIns/{checkInId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Catch-all rule for other collections (temporary access)
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 3, 19);
+    }
+  }
+} 
